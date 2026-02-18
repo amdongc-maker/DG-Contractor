@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Contractor DG Panel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+ font-family:Segoe UI;
+ background:#f1f5f9;
+ margin:0;
+}
+header{
+ background:#047857;
+ color:#fff;
+ padding:14px;
+ text-align:center;
+ font-weight:700;
+ font-size:18px;
+}
+.container{
+ max-width:1000px;
+ margin:auto;
+ padding:12px;
+}
+.card{
+ background:#fff;
+ padding:14px;
+ border-radius:12px;
+ margin-bottom:14px;
+ box-shadow:0 4px 12px rgba(0,0,0,.08);
+}
+.profile{
+ background:#ecfdf5;
+ border-left:5px solid #047857;
+}
+input,select{
+ width:100%;
+ padding:12px;
+ margin-top:10px;
+ border-radius:12px;
+ border:1px solid #ccc;
+ box-sizing:border-box;
+ font-size:14px;
+ margin:6px 0;
+}
+button{
+ background:#22c55e;
+ color:#fff;
+ padding:10px;
+ border:none;
+ border-radius:8px;
+ font-weight:600;
+ width:100%;
+ margin-top:10px;
+}
+.hidden{display:none}
+.well-row{
+ display:grid;
+ grid-template-columns:60px 1fr 1fr 1fr;
+ gap:8px;
+ margin-top:8px;
+ align-items:center;
+}
+.section-title{
+ font-weight:700;
+ margin:15px 0 8px;
+ color:#065f46;
+}
+.history{
+ background:#f0fdf4;
+ border-left:4px solid #22c55e;
+}
+</style>
+</head>
+
+<body>
+
+<header>CONTRACTOR DG PANEL</header>
+
+<div class="container">
+
+<!-- LOGIN -->
+<div id="loginBox" class="card">
+<h3>Contractor Login</h3>
+<input id="user" placeholder="Contractor ID">
+<input id="pass" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+<div id="msg" style="color:red"></div>
+</div>
+
+<!-- MAIN -->
+<div id="mainBox" class="hidden">
+<div id="profileBox" class="card profile"></div>
+
+<div class="section-title"><h3>Active Requests</h3></div>
+<div id="activeData"></div>
+
+<div class="section-title"><h3>History (DG Deployed)</h3></div>
+<div id="historyData"></div>
+</div>
+
+</div>
+
+<script>
+const WEBAPP_URL="https://script.google.com/macros/s/AKfycbz6XQM8odGAZ4qS280OViUzDJKTfdwjrqVFCKPWP1UnC6Pnpf_6ZMggW3PjC4I-pYsF-Q/exec";
+
+/* CONTRACTORS */
+const CONTRACTORS=[
+ {
+  id:"C001", pass:"123",
+  name:"ABC DG Services",
+  company:"ABC DG Services",
+  mobile:"9876543210",
+  operators:[
+   {name:"Ramesh Patel", mobile:"9001112233"},
+   {name:"Amit Solanki", mobile:"9001112244"}
+  ]
+ }
+];
+
+let CURRENT_CONTRACTOR=null;
+
+/* LOGIN */
+function login(){
+ let u=CONTRACTORS.find(
+  x=>x.id===user.value && x.pass===pass.value
+ );
+ if(!u){
+  msg.innerText="Invalid Login";
+  return;
+ }
+ CURRENT_CONTRACTOR=u;
+ loginBox.classList.add("hidden");
+ mainBox.classList.remove("hidden");
+ loadProfile();
+ loadData();
+}
+
+/* PROFILE */
+function loadProfile(){
+ profileBox.innerHTML=`
+ <h3>${CURRENT_CONTRACTOR.name}</h3>
+ <b>Company:</b> ${CURRENT_CONTRACTOR.company}<br>
+ <b>Mobile:</b> ${CURRENT_CONTRACTOR.mobile}
+ `;
+}
+
+/* LOAD DATA */
+function loadData(){
+ fetch(WEBAPP_URL+
+ "?action=contractorApproved"+
+ "&company="+encodeURIComponent(CURRENT_CONTRACTOR.company))
+ .then(r=>r.json())
+ .then(res=>{
+
+  let activeHTML="";
+  let historyHTML="";
+
+  res.forEach(req=>{
+
+   let activeBlock="";
+   let historyBlock="";
+   let srA=1, srH=1;
+
+   req.wells.forEach(w=>{
+
+   if(w.start && w.stop){
+     historyBlock+=`
+     <div class="well-row">
+      <div>${srH++}</div>
+      <div>${w.well}</div>
+      <div>${w.cap}</div>
+      <div><b>${w.operator || ""}</b></div>
+     </div>`;
+    }else{
+     let ops=CURRENT_CONTRACTOR.operators.map(o=>
+      `<option value="${o.name}|${o.mobile}">
+       ${o.name} (${o.mobile})
+      </option>`
+     ).join("");
+
+     activeBlock+=`
+     <div class="well-row">
+      <div>${srA++}</div>
+      <div>${w.well}</div>
+      <div>${w.cap}</div>
+      <div>
+       <select class="opSelect" data-row="${w.rowId}">
+        <option value="">Select Operator</option>
+        ${ops}
+       </select>
+      </div>
+     </div>`;
+    }
+   });
+
+   if(activeBlock){
+    activeHTML+=`
+    <div class="card">
+     <h3>Request ID : ${req.requestId}</h3>
+     <div><b>Installation:</b> ${req.installation}</div>
+     <div><b>Shutdown Date:</b> ${new Date(req.shutdownDate).toLocaleDateString("en-GB")}</div>
+     <div><b>Shutdown Type:</b> ${req.shutdownType}</div>
+     <div><b>Information:</b> ${req.information}</div>
+     <div><b>Feeder:</b> ${req.feeder}</div>
+     <hr>
+     ${activeBlock}
+     <button onclick="assignOperatorAll(this)">
+      Assign Operator
+     </button>
+    </div>`;
+   }
+
+   if(historyBlock){
+    historyHTML+=`
+    <div class="card history">
+     <h3>Request ID : ${req.requestId}</h3>
+     <div><b>Installation:</b> ${req.installation}</div>
+     <div><b>Shutdown Date:</b> ${new Date(req.shutdownDate).toLocaleDateString("en-GB")}</div>
+     <div><b>Shutdown Type:</b> ${req.shutdownType}</div>
+     <div><b>Information:</b> ${req.information}</div>
+     <div><b>Feeder:</b> ${req.feeder}</div>
+     <hr>
+     ${historyBlock}
+    </div>`;
+   }
+
+  });
+
+  activeData.innerHTML = activeHTML || "No Active Requests";
+  historyData.innerHTML = historyHTML || "No History Yet";
+ });
+}
+
+/* SINGLE BUTTON ASSIGN */
+function assignOperatorAll(btn){
+
+ let card = btn.closest(".card");
+ let selects = card.querySelectorAll(".opSelect");
+
+ selects.forEach(sel=>{
+  let val = sel.value;
+  if(!val) return;
+
+  let rowId = sel.dataset.row;
+  let parts = val.split("|");
+  let name = parts[0];
+  let mobile = parts[1];
+
+  fetch(
+   WEBAPP_URL +
+   "?action=assignOperator" +
+   "&rowId=" + rowId +
+   "&name=" + encodeURIComponent(name) +
+   "&mobile=" + encodeURIComponent(mobile)
+  );
+ });
+
+ alert("All selected operators assigned successfully");
+ loadData();
+}
+</script>
+</body>
+</html>

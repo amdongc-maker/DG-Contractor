@@ -104,7 +104,7 @@ button{
 </div>
 
 <script>
-const WEBAPP_URL="https://script.google.com/macros/s/AKfycbz6XQM8odGAZ4qS280OViUzDJKTfdwjrqVFCKPWP1UnC6Pnpf_6ZMggW3PjC4I-pYsF-Q/exec";
+const WEBAPP_URL="https://script.google.com/macros/s/AKfycbyKuvgqAAyilav4QpGN4QWQgi0w_D09tMcHiYSQkD8hrXDTuaHwEJnevLoGN_PcTfVIUQ/exec";
 
 /* CONTRACTORS */
 const CONTRACTORS=[
@@ -166,7 +166,7 @@ function loadData(){
 
    req.wells.forEach(w=>{
 
-   if(w.start && w.stop){
+  if(w.operator !== "NA"){
      historyBlock+=`
      <div class="well-row">
       <div>${srH++}</div>
@@ -263,5 +263,4 @@ function assignOperatorAll(btn){
 }
 </script>
 </body>
-
 </html>

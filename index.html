@@ -166,7 +166,7 @@ function loadData(){
 
    req.wells.forEach(w=>{
 
-  if(w.operator !== "NA"){
+  if(w.approverStatus !== "Approved"){
      historyBlock+=`
      <div class="well-row">
       <div>${srH++}</div>
@@ -263,4 +263,5 @@ function assignOperatorAll(btn){
 }
 </script>
 </body>
+
 </html>

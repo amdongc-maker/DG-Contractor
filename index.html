@@ -18,6 +18,26 @@ table{width:100%;border-collapse:collapse;font-size:14px;margin-top:10px}
 th,td{border:1px solid #e5e7eb;padding:8px;text-align:center}
 th{background:#f0fdf4}
 .history{background:#f0fdf4;border-left:4px solid #22c55e}
+input, select{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border-radius:12px;
+  border:1px solid #ddd;
+  box-sizing:border-box;
+  font-size:14px;
+}
+/* Buttons */
+button{
+  background-color: #047857;
+  width:100%;
+  padding:14px;
+  margin-top:12px;
+  border:none;
+  border-radius:14px;
+  font-weight:700;color: #f1f5f9;
+  cursor:pointer;
+}
 </style>
 </head>
 
@@ -36,7 +56,6 @@ th{background:#f0fdf4}
 </div>
 
 <div id="mainBox" class="hidden">
-
 <div id="profileBox" class="card profile"></div>
 
 <h3>🟢 Active Requests</h3>
@@ -44,12 +63,11 @@ th{background:#f0fdf4}
 
 <h3>📜 History</h3>
 <div id="historyData"></div>
-
 </div>
 </div>
 
 <script>
-const WEBAPP_URL="https://script.google.com/macros/s/AKfycbyVfX-Y-oTbIcHlgzJJJDVAgtDi_hHUhxaiqObTMunG08jvrcZv458_AzlW1deVNZWZFQ/exec";
+const WEBAPP_URL="https://script.google.com/macros/s/AKfycbwupek1DhAv96BCqg-uJNTBcGbY19Dc_0HkGLgue8uG1AJJFFgUfEiuzHEMOYQzbPrdyA/exec";
 
 /* LOGIN USERS */
 const CONTRACTORS=[
@@ -78,12 +96,21 @@ function login(){
  loadData();
 }
 
+/* FORMAT DATE */
+function fmtDate(d){
+ if(!d) return "NA";
+ try{ return new Date(d).toLocaleDateString("en-GB"); }
+ catch(e){ return d; }
+}
+
 /* LOAD DATA */
 function loadData(){
  fetch(`${WEBAPP_URL}?action=contractorApproved&company=${encodeURIComponent(CURRENT_CONTRACTOR.company)}`)
  .then(r=>r.json())
  .then(res=>{
-  console.log(res);
+  
+ // ⭐ Latest request top par lane ke liye
+ res.sort((a,b)=> Number(b.requestId) - Number(a.requestId));
 
   let activeHTML="", historyHTML="";
 
@@ -93,57 +120,75 @@ function loadData(){
 
     req.wells.forEach(w=>{
 
-      // ✅ HISTORY ONLY IF DEPLOYED
-      if(w.dgStatus === "DG Deployed"){
+      // ✅ HISTORY
+      if(String(w.dgStatus).trim().toUpperCase()==="DG DEPLOYED"){
         hRows+=`
         <tr>
-         <td>${sr++}</td>
-         <td>${w.well}</td>
-         <td>${w.cap}</td>
-         <td>${w.operator||""}</td>
-         <td>${w.operatorMobile||""}</td>
-         <td>${w.dgStart||"NA"}</td>
-         <td>${w.dgStop||"NA"}</td>
+          <td>${sr++}</td>
+          <td>${w.well || "NA"}</td>
+          <td>${w.operator || "NA"}</td>
+          <td>${w.operatorMobile || w.operator_mobile || w.opMobile || "NA"}</td>
         </tr>`;
       }
 
-      // ✅ ACTIVE IF NOT DEPLOYED
+      // ✅ ACTIVE
       else{
-        let ops=CURRENT_CONTRACTOR.operators.map(o=>`<option value="${o.name}|${o.mobile}">${o.name} (${o.mobile})</option>`).join("");
+        let ops=CURRENT_CONTRACTOR.operators
+          .map(o=>`<option value="${o.name}|${o.mobile}">${o.name} (${o.mobile})</option>`)
+          .join("");
+
         aRows+=`
         <tr>
-         <td>${sr++}</td>
-         <td>${w.well}</td>
-         <td>${w.cap}</td>
-         <td>
-          <select class="opSelect" data-row="${w.rowId}">
-           <option value="">Select Operator</option>${ops}
-          </select>
-         </td>
+          <td>${sr++}</td>
+          <td>${w.well}</td>
+          <td>
+            <select class="opSelect" data-row="${w.rowId}">
+              <option value="">Select Operator</option>${ops}
+            </select>
+          </td>
         </tr>`;
       }
     });
 
+    // ✅ ACTIVE CARD (added fields)
     if(aRows){
       activeHTML+=`
-      <div class="card">
-       <h4>Request ID ${req.requestId}</h4>
-       Installation: ${req.installation}<br>
-       Feeder: ${req.feeder}<br><hr>
-       <table><tr><th>Sr</th><th>Well</th><th>Cap</th><th>Operator</th></tr>${aRows}</table>
-       <button onclick="finalSubmit(this)">FINAL SUBMIT</button>
-      </div>`;
+<div class="card">
+ <h4>Request ID ${req.requestId}</h4>
+ <b>Installation:</b> ${req.installation}<br>
+ <b>Feeder:</b> ${req.feeder}<br>
+ <b>Shutdown Date:</b> ${fmtDate(req.shutdownDate)}<br>
+ <b>Requester Name:</b> ${req.requestedBy || "NA"}<br>
+ <b>Requester Mobile:</b> ${req.mobile || "NA"}<br>
+ <hr>
+ <table>
+   <tr><th>Sr</th><th>Well</th><th>Operator</th></tr>
+   ${aRows}
+ </table>
+ <button onclick="finalSubmit(this)">FINAL SUBMIT</button>
+</div>`;
     }
 
+    // ✅ HISTORY CARD (added fields)
     if(hRows){
       historyHTML+=`
-      <div class="card history">
-       <h4>Request ID ${req.requestId}</h4>
-       <table>
-       <tr><th>Sr</th><th>Well</th><th>Cap</th><th>Operator</th><th>Mobile</th><th>Start</th><th>Stop</th></tr>
-       ${hRows}
-       </table>
-      </div>`;
+<div class="card history">
+ <h4>Request ID ${req.requestId}</h4>
+ <b>Installation:</b> ${req.installation}<br>
+ <b>Feeder:</b> ${req.feeder}<br>
+ <b>Shutdown Date:</b> ${fmtDate(req.shutdownDate)}<br>
+ <b>Requester Name:</b> ${req.requestedBy || "NA"}<br>
+ <b>Requester Mobile:</b> ${req.mobile || "NA"}<br>
+ <table>
+   <tr>
+     <th>Sr</th>
+     <th>Well No.</th>
+     <th>Operator Name</th>
+     <th>Mobile</th>
+   </tr>
+   ${hRows}
+ </table>
+</div>`;
     }
   });
 
@@ -154,21 +199,52 @@ function loadData(){
 
 /* FINAL SUBMIT */
 function finalSubmit(btn){
- const selects = btn.closest(".card").querySelectorAll(".opSelect");
- let rows=[];
 
- selects.forEach(s=>{
-  if(!s.value) return;
-  let [n,m]=s.value.split("|");
-  rows.push(s.dataset.row);
-  fetch(`${WEBAPP_URL}?action=assignOperator&rowId=${s.dataset.row}&name=${n}&mobile=${m}`);
- });
+  // 🔒 double click guard
+  if(btn.disabled) return;
+  btn.disabled = true;
+  btn.innerText = "Processing...";
 
- if(!rows.length){ alert("Select Operator First"); return; }
+  const selects = btn.closest(".card").querySelectorAll(".opSelect");
 
- // ✅ correct deploy function
- fetch(`${WEBAPP_URL}?action=contractorDeploy&rows=${encodeURIComponent(JSON.stringify(rows))}`)
- .then(()=>{ alert("DG DEPLOYED"); loadData(); });
+  let payload = [];
+
+  selects.forEach(s=>{
+    if(!s.value) return;
+
+    let [name,mobile] = s.value.split("|");
+
+    payload.push({
+      rowId: s.dataset.row,
+      operatorName: name,
+      operatorMobile: mobile
+    });
+  });
+
+  if(!payload.length){
+    alert("Select Operator First");
+    btn.disabled = false;
+    btn.innerText = "FINAL SUBMIT";
+    return;
+  }
+
+  fetch(`${WEBAPP_URL}?action=contractorFinalSubmit&data=${encodeURIComponent(JSON.stringify(payload))}`)
+  .then(r=>r.text())
+  .then(txt=>{
+    if(String(txt).includes("OK")){
+      alert("DG DEPLOYED ✅");
+      loadData();
+    }else{
+      alert("Server Error");
+      btn.disabled = false;
+      btn.innerText = "FINAL SUBMIT";
+    }
+  })
+  .catch(()=>{
+    alert("Network Error");
+    btn.disabled = false;
+    btn.innerText = "FINAL SUBMIT";
+  });
 }
 </script>
 

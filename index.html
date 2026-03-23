@@ -67,6 +67,15 @@ button{
 </div>
 
 <script>
+  function formatDateTime(val){
+  if(!val || val === "NA") return "NA";
+
+  let d = new Date(val);
+
+  if(isNaN(d.getTime())) return "NA";
+
+  return d.toLocaleString("en-GB");
+}
 const WEBAPP_URL="https://script.google.com/macros/s/AKfycbw0sDlTPWJa0H6Wj8ug6dGzttaWqIhW0X-B4MdwTfa_Q5Uw_YGS1qdkLAIznComZz5kRQ/exec";
 
 /* LOGIN USERS */
@@ -125,13 +134,16 @@ function loadData(){
 
 if(status === "DG Deployed"){
   // ✅ HISTORY
-  hRows+=`
-  <tr>
-    <td>${sr++}</td>
-    <td>${w.well || "NA"}</td>
-    <td>${w.operator || "NA"}</td>
-    <td>${w.operatorMobile || w.operator_mobile || w.opMobile || "NA"}</td>
-  </tr>`;
+ hRows+=`
+<tr>
+  <td>${sr++}</td>
+  <td>${w.well || "NA"}</td>
+  <td>${w.operator || "NA"}</td>
+  <td>${w.operatorMobile || w.operator_mobile || w.opMobile || "NA"}</td>
+  <td>${formatDateTime(w.dgStart)}</td>
+  <td>${formatDateTime(w.dgStop)}</td>
+ <td>${w.totalTime || "NA"}</td>
+</tr>`;
 }
 else if(status === "Rejected" || status === "DG CANCELLED"){
   // ❌ ignore completely → na Active me, na History me
@@ -185,11 +197,14 @@ else{
  <b>Requester Mobile:</b> ${req.mobile || "NA"}<br>
  <table>
    <tr>
-     <th>Sr</th>
-     <th>Well No.</th>
-     <th>Operator Name</th>
-     <th>Mobile</th>
-   </tr>
+  <th>Sr</th>
+  <th>Well No.</th>
+  <th>Operator Name</th>
+  <th>Mobile</th>
+  <th>DG Start</th>
+  <th>DG Stop</th>
+  <th>Total Hrs</th>
+</tr>
    ${hRows}
  </table>
 </div>`;
